@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PinAtlas — Free IFSC Code Validator & PIN Code Decoder (India)</title>
+<meta name="description" content="PinAtlas is a free online tool to validate Indian IFSC codes, identify the bank from the bank code (including merged-bank alerts), and decode 6-digit PIN codes into postal zones and sorting districts. Offline, indicative data — unlimited free usage.">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --kraft:#F5EFE0; --brown:#92400E; --red:#B91C1C;
+  }
+  html{ scroll-behavior:smooth; }
+  body{
+    background-color:var(--kraft);
+    background-image:
+      radial-gradient(rgba(146,64,14,.045) 1px, transparent 1px);
+    background-size:22px 22px;
+    color:#3b2b1e;
+    font-family:Georgia,'Times New Roman',serif;
+  }
+  .sans{ font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  /* perforated stamp edge */
+  .perforated{
+    --dot:rgba(146,64,14,.55);
+    background-image:radial-gradient(var(--dot) 1.6px, transparent 1.7px);
+    background-size:12px 12px;
+    background-position:0 0;
+  }
+  .stamp-card{
+    background:#fffdf6;
+    border:2px dashed var(--brown);
+    position:relative;
+  }
+  .postmark{
+    border:3px double var(--red);
+    color:var(--red);
+    border-radius:9999px;
+    transform:rotate(-8deg);
+    opacity:.85;
+    letter-spacing:.22em;
+  }
+  .tape{
+    background:rgba(185,28,28,.12);
+    border-left:1px dashed rgba(185,28,28,.5);
+    border-right:1px dashed rgba(185,28,28,.5);
+  }
+  .seg-chip{ border:2px solid var(--brown); }
+  input.code-input{ letter-spacing:.12em; }
+  .tab-active{
+    background:var(--brown); color:var(--kraft);
+  }
+  .tab-idle{
+    background:transparent; color:var(--brown); border:2px solid var(--brown);
+  }
+  .faq-item summary{ cursor:pointer; }
+  .faq-item summary::-webkit-details-marker{ display:none; }
+  @media print{ .no-print{ display:none !important; } }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is an IFSC code and what is it used for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IFSC stands for Indian Financial System Code. It is an 11-character alphanumeric code assigned by the Reserve Bank of India (RBI) to every bank branch in India. It is used to identify the exact bank and branch during electronic fund transfers such as NEFT, RTGS and IMPS. The first 4 characters identify the bank, the 5th character is always 0, and the last 6 characters identify the branch."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I find the IFSC code of my bank branch?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The fastest ways are: check the top of your cheque book leaf, look at your bank passbook, open your bank's mobile app or net-banking portal under account details, or search your bank's official branch locator on its website. RBI also publishes the official IFSC list. Always confirm the code from an official source before adding a new payee."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is it safe to share my IFSC code with someone?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — an IFSC code alone cannot be used to withdraw money from your account. It only identifies your bank branch so that someone can send money to you. It becomes sensitive only when shared together with your account number and personal details, so share it only with people or businesses you trust."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is the 5th character of every IFSC code always 0?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The 5th character of an IFSC code is reserved by the RBI for future use. It is always the digit 0 in all currently issued IFSC codes, which gives the code its fixed 4 + 1 + 6 structure: 4 letters for the bank, one reserved zero, and 6 characters for the branch."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What do the digits of an Indian PIN code mean?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A PIN (Postal Index Number) code has 6 digits. The 1st digit indicates one of India's 9 postal zones, the 2nd digit indicates the sub-zone, the 3rd digit (with the first two) indicates the sorting district, and the final 3 digits identify the individual post office within that sorting district. Zone 9 is reserved for the Army Postal Service."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "My bank merged with another bank — has my IFSC code changed?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Possibly. After mergers such as Allahabad Bank into Indian Bank, Andhra Bank and Corporation Bank into Union Bank of India, Syndicate Bank into Canara Bank, and the SBI associate banks into SBI, the old IFSC codes were eventually replaced with the successor bank's codes. Old codes often keep working during a transition period, but you should always confirm the current IFSC with the successor bank before making a transfer."
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body id="top" class="min-h-screen">
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 shadow-md" style="background:#92400E">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-3">
+      <span class="inline-flex items-center justify-center w-11 h-11 rounded-sm perforated p-1" aria-hidden="true">
+        <span class="flex items-center justify-center w-full h-full text-xl font-bold rounded-sm" style="background:#F5EFE0;color:#B91C1C">✉</span>
+      </span>
+      <span class="text-2xl font-bold tracking-wide" style="color:#F5EFE0">PinAtlas</span>
+    </a>
+    <nav class="sans text-sm sm:text-base font-semibold" style="color:#F5EFE0">
+      <a href="#top" class="hover:underline mr-4 sm:mr-6">Home</a>
+      <a href="https://fixoraa.tech" class="hover:underline">More Tools</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ TOP AD (verbatim) ============ -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pt-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <div class="origin-top scale-[0.44] sm:scale-100 shrink-0">
+        <script>
+          atOptions = { 'key' : '4e68ac77881c17fe128a46565d9a4e8c', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
+        </script>
+        <script src="https://www.highrevenueformat.com/4e68ac77881c17fe128a46565d9a4e8c/invoke.js"></script>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HERO ============ -->
+<section class="mx-auto max-w-6xl px-4 sm:px-6 pt-8 pb-2 text-center relative">
+  <div class="postmark sans inline-block px-5 py-2 text-xs sm:text-sm font-extrabold uppercase mb-5">Registered Post</div>
+  <h1 class="text-4xl sm:text-5xl font-bold leading-tight" style="color:#92400E">IFSC Validator &amp; PIN Code Decoder</h1>
+  <p class="sans mt-3 text-base sm:text-lg max-w-2xl mx-auto" style="color:#6b4a2f">
+    Check any 11-character Indian bank IFSC code segment-by-segment, identify the bank — including merged-bank alerts —
+    and decode any 6-digit PIN code into its postal zone and sorting district.
+  </p>
+  <div class="sans mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold" style="background:#B91C1C;color:#F5EFE0">
+    ✦ Unlimited Free Usage
+  </div>
+  <p class="sans mt-3 text-xs max-w-xl mx-auto" style="color:#8a6b4d">
+    Works fully offline in your browser. Results are <strong>indicative, not a live directory</strong> — always verify codes with your bank or India Post before a transfer.
+  </p>
+</section>
+
+<!-- ============ TOOL ============ -->
+<main class="mx-auto max-w-4xl px-4 sm:px-6 py-8">
+  <div class="stamp-card rounded-lg p-5 sm:p-8 shadow-lg">
+
+    <!-- tabs -->
+    <div class="sans flex flex-wrap gap-3 justify-center mb-7 no-print" role="tablist" aria-label="Tool mode">
+      <button id="tab-ifsc" role="tab" aria-selected="true" class="tab-active px-6 py-2.5 rounded-md font-bold text-sm sm:text-base tracking-wide">🏦 IFSC Validator</button>
+      <button id="tab-pin" role="tab" aria-selected="false" class="tab-idle px-6 py-2.5 rounded-md font-bold text-sm sm:text-base tracking-wide">📮 PIN Decoder</button>
+    </div>
+
+    <!-- ===== IFSC PANEL ===== -->
+    <section id="panel-ifsc" role="tabpanel" aria-labelledby="tab-ifsc">
+      <label for="ifsc-input" class="sans block text-sm font-bold mb-2" style="color:#92400E">Enter IFSC code</label>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input id="ifsc-input" type="text" maxlength="11" placeholder="e.g. SBIN0001234" autocomplete="off" spellcheck="false"
+          class="code-input mono flex-1 min-w-0 text-lg sm:text-xl px-4 py-3 rounded-md border-2 uppercase no-print"
+          style="border-color:#92400E;background:#fffdf6" aria-describedby="ifsc-hint">
+        <button id="ifsc-btn" class="sans px-8 py-3 rounded-md font-extrabold text-base no-print" style="background:#B91C1C;color:#F5EFE0">Validate</button>
+      </div>
+      <p id="ifsc-hint" class="sans text-xs mt-2" style="color:#8a6b4d">Format: 4 letters (bank) + 0 + 6 letters/digits (branch). Lowercase is fine — we convert it.</p>
+      <div id="ifsc-result" class="mt-6" aria-live="polite"></div>
+    </section>
+
+    <!-- ===== PIN PANEL ===== -->
+    <section id="panel-pin" role="tabpanel" aria-labelledby="tab-pin" hidden>
+      <label for="pin-input" class="sans block text-sm font-bold mb-2" style="color:#92400E">Enter PIN code</label>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input id="pin-input" type="text" inputmode="numeric" maxlength="6" placeholder="e.g. 110001" autocomplete="off" spellcheck="false"
+          class="code-input mono flex-1 min-w-0 text-lg sm:text-xl px-4 py-3 rounded-md border-2 no-print"
+          style="border-color:#92400E;background:#fffdf6" aria-describedby="pin-hint">
+        <button id="pin-btn" class="sans px-8 py-3 rounded-md font-extrabold text-base no-print" style="background:#B91C1C;color:#F5EFE0">Decode</button>
+      </div>
+      <p id="pin-hint" class="sans text-xs mt-2" style="color:#8a6b4d">Exactly 6 digits. The first digit tells the postal zone; the first two point to the sorting district.</p>
+      <div id="pin-result" class="mt-6" aria-live="polite"></div>
+    </section>
+
+    <!-- ===== RECENT CHECKS ===== -->
+    <div class="sans mt-8 pt-6" style="border-top:2px dashed #92400E">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-extrabold tracking-widest uppercase" style="color:#92400E">🕘 Recent checks <span class="font-normal normal-case tracking-normal" style="color:#8a6b4d">(saved on this device)</span></h2>
+        <button id="hist-clear" class="text-xs font-bold underline no-print" style="color:#B91C1C">Clear</button>
+      </div>
+      <div id="hist-list" class="flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ BOTTOM AD (verbatim) ============ -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pb-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <script async src="https://js.wpadmngr.com/static/adManager.js" data-admpid="464498"></script>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SEO ARTICLE ============ -->
+<article class="mx-auto max-w-4xl px-4 sm:px-6 pb-10">
+  <div class="rounded-lg p-6 sm:p-10 shadow" style="background:#fffdf6;border:1px solid #e2d6bd">
+    <h2 class="text-2xl sm:text-3xl font-bold mb-6" style="color:#92400E">The Complete Guide to IFSC Codes and Indian PIN Codes</h2>
+<!-- ARTICLE START -->
+    <div class="sans text-[15px] leading-relaxed space-y-5" style="color:#4a3826">
+      <p>If you have ever added a payee in a banking app, you have met the IFSC code: an 11-character string that looks random but is really a small, precisely engineered address for your bank branch. And if you have ever ordered something online, you have typed a PIN code — the six digits that tell India Post exactly which post office should deliver your parcel. PinAtlas validates the first and decodes the second, entirely in your browser, with no signup and no fees. This guide explains what both codes actually mean, how to read them like a postal clerk or a bank officer, and — just as important — what no offline tool can tell you.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">What is an IFSC code?</h3>
+      <p>IFSC stands for Indian Financial System Code. It is an alphanumeric code of exactly 11 characters assigned by the Reserve Bank of India (RBI) to every bank branch in the country. It exists for one purpose: to make sure electronic money reaches the right branch. Whenever you send money through NEFT (National Electronic Funds Transfer), RTGS (Real-Time Gross Settlement) or IMPS (Immediate Payment Service), the banking system reads the IFSC to route the payment to the correct bank and the correct branch within it. Think of it as the postal address of a bank account in India's digital payment network.</p>
+      <p>Every scheduled commercial bank, most cooperative banks and many regional rural banks have IFSC codes for their branches. A few very small institutions and some payment banks handle transfers differently, but for mainstream banking — public sector giants like State Bank of India and Punjab National Bank, private leaders like HDFC Bank, ICICI Bank, Axis Bank and Kotak Mahindra Bank — the IFSC is the standard identifier.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Reading an IFSC code: the 4 + 1 + 6 anatomy</h3>
+      <p>An IFSC code is not random. It has three fixed parts. The first four characters are always letters and identify the bank — SBIN for State Bank of India, HDFC for HDFC Bank, ICIC for ICICI Bank, PUNB for Punjab National Bank, BARB for Bank of Baroda, UTIB for Axis Bank, KKBK for Kotak Mahindra Bank, CNRB for Canara Bank, UBIN for Union Bank of India and IBKL for IDBI Bank. The fifth character is always the digit 0; the RBI reserved it for future use, so it carries no meaning today but must be present. The last six characters — letters or digits — identify the specific branch.</p>
+      <p>Take SBIN0001234 as an example. SBIN tells the system the bank is State Bank of India, the 0 is the reserved character, and 001234 points to one particular branch. PinAtlas breaks any code you enter into these three segments and checks each one separately, so instead of a bare "valid" or "invalid" you see exactly which part fails — a wrong-length code, a fifth character that is not zero, or a branch segment containing a forbidden symbol.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Why validate an IFSC before you transfer money?</h3>
+      <p>A single wrong character in an IFSC can send your money to the wrong branch or cause the transfer to fail outright. Banks generally match the account number with the name you provide, but the IFSC decides where the money is routed first. The most common mistakes are typing errors (a 0 typed as the letter O, or vice versa), using an outdated code from before a bank merger, and copy-pasting a code from an unverified website. A format validator catches the typing errors instantly. It cannot, however, confirm that a particular branch code exists — only your bank or the RBI's official list can do that. That is why PinAtlas is honest about its limits: it validates structure and identifies the bank, but it is not a live branch directory, and you should always confirm a new payee's IFSC from an official source before sending money.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Bank mergers changed thousands of IFSC codes</h3>
+      <p>India's banking landscape has been reshaped by mergers, and old IFSC codes did not always survive them. Allahabad Bank merged into Indian Bank; Andhra Bank and Corporation Bank merged into Union Bank of India; Syndicate Bank merged into Canara Bank; Oriental Bank of Commerce and United Bank of India merged into Punjab National Bank; Dena Bank and Vijaya Bank merged into Bank of Baroda; and five State Bank associate banks — State Bank of Bikaner &amp; Jaipur, State Bank of Hyderabad, State Bank of Mysore, State Bank of Travancore and State Bank of Patiala — merged into State Bank of India. In most cases the successor bank issued new IFSC codes and kept the old ones working for a transition period. If your code starts with one of the old bank prefixes — ALLA, ANDB, CORP, SYNB, ORBC, UTBI, BKDN, VIJB, SBBJ, SBHY, SBMY, SBTR or STBP — PinAtlas raises a merged-bank alert and names the successor bank, so you know to double-check the current code rather than trusting an old cheque book.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Where to find your IFSC code</h3>
+      <p>The quickest source is usually your cheque book: the IFSC is printed on every cheque leaf, typically near the top. Your bank passbook and account statement carry it too. In mobile banking apps and net-banking portals it sits under account details. Every bank also runs an official branch locator on its website, and the RBI publishes the authoritative list. Payment apps often auto-fill the IFSC when you enter the branch name and city, which is convenient — but if you are setting up a high-value payee, cross-check the code against two sources, for instance your passbook and the bank's website. Avoid random aggregator sites you cannot verify, because fake or stale IFSC listings do circulate online.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">IFSC vs MICR vs SWIFT: do not confuse them</h3>
+      <p>Three codes appear on Indian bank documents and they do different jobs. The IFSC routes electronic transfers within India. The MICR (Magnetic Ink Character Recognition) code is a 9-digit number printed at the bottom of cheques in magnetic ink; it identifies the bank and branch for cheque clearing through the physical sorting machines. The SWIFT/BIC code is used for international wire transfers and identifies the bank globally, not the branch. For a domestic NEFT, RTGS or IMPS transfer you need the IFSC; for an incoming payment from abroad you will usually be asked for the SWIFT code plus the IFSC.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">What is a PIN code?</h3>
+      <p>PIN stands for Postal Index Number. Introduced on 15 August 1972 by Shriram Bhikaji Velankar, then an additional secretary in the Union Ministry of Communications, it is the six-digit code India Post uses to sort and deliver mail. Before the PIN, sorting staff struggled with similar place names written in different languages and scripts; the numeric code removed that ambiguity and let mail be sorted mechanically and, later, automatically. Today the PIN is also the backbone of e-commerce logistics, address verification and location-based services across India.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Reading a PIN code: zone, sub-zone, sorting district, post office</h3>
+      <p>Like the IFSC, a PIN code has a fixed anatomy. The first digit indicates one of India's nine postal zones — eight regional zones plus one functional zone for the Indian Army's postal service. The second digit indicates the sub-zone, and the third digit, together with the first two, identifies the sorting district: the main post office of the largest city in that region, where mail for the area is first routed. The final three digits are assigned to individual delivery post offices within the sorting district.</p>
+      <p>The nine zones are easy to remember once you see the map. Zone 1 covers the north: Delhi, Haryana, Punjab, Himachal Pradesh, Jammu &amp; Kashmir, Ladakh and Chandigarh. Zone 2 is Uttar Pradesh and Uttarakhand. Zone 3 is the west: Rajasthan, Gujarat, Dadra and Nagar Haveli and Daman and Diu. Zone 4 is Maharashtra, Goa, Madhya Pradesh and Chhattisgarh. Zone 5 is the south: Telangana, Andhra Pradesh and Karnataka. Zone 6 is Tamil Nadu, Kerala, Puducherry and Lakshadweep. Zone 7 is the largest: West Bengal, Odisha and the entire Northeast — Assam, Arunachal Pradesh, Nagaland, Manipur, Mizoram, Tripura, Meghalaya and Sikkim — plus the Andaman and Nicobar Islands. Zone 8 is Bihar and Jharkhand. Zone 9 is reserved for Army Post Offices and Field Post Offices.</p>
+      <p>PinAtlas decodes all of this from the digits alone. Enter 110001 and you learn that 1 means the northern zone and 11 means the Delhi sorting district. Enter 400001 and you get zone 4 with the Mumbai sorting district of Maharashtra. Enter 700001 and you get zone 7, Kolkata, West Bengal. A handful of three-digit prefixes need special handling — 396 for Dadra and Nagar Haveli and Daman and Diu, 403 for Goa, 605 for Puducherry, 682 for Lakshadweep, 737 for Sikkim and 744 for the Andaman and Nicobar Islands — and the decoder knows them.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">What an offline decoder can and cannot tell you</h3>
+      <p>Here is the honest part. A PIN code's digits reveal its zone and sorting district by design — that is public, structural information. But the digits cannot tell you the name of the post office, the locality, or the delivery beat: the last three digits are simply serial numbers assigned within each sorting district. India has more than 19,000 PIN codes, and a full live directory of them would be far too heavy — and too quickly outdated — for a single web page. Any site that claims to identify your exact locality from the digits alone is guessing. PinAtlas does not guess. It decodes the zone and district accurately, labels the result as indicative, and points you to India Post's official PIN search for the exact post office. The same honesty applies to IFSC validation: format and bank identification are checkable offline; whether a specific branch code is currently active is not, and only the bank or the RBI can confirm it.</p>
+
+      <h3 class="text-xl font-bold pt-2" style="color:#92400E">Practical tips for both codes</h3>
+      <p>Keep your own IFSC saved in your phone's notes so you can share it with anyone who needs to pay you — sharing an IFSC alone is safe, because it cannot be used to withdraw money; it only identifies your branch for incoming transfers. When someone sends you their IFSC, run it through a validator before adding the payee, and confirm it against the bank's own site if the amount is large. For PIN codes, double-check the six digits on parcels and official forms: a wrong first digit can send your package to another state entirely, because the zone digit decides the first and most consequential sorting step. And remember that new PIN codes are occasionally created and post offices reorganised, so treat any third-party result as a starting point, not the final word.</p>
+
+      <p>PinAtlas exists to make these two small strings of characters less mysterious. Validate the structure, read the segments, identify the bank, decode the zone — and then verify with the official source before you act. That combination of instant checking and honest limits is what makes a code tool genuinely useful.</p>
+<!-- ARTICLE END -->
+    </div>
+
+    <h2 class="text-2xl font-bold mt-10 mb-5" style="color:#92400E">Frequently Asked Questions</h2>
+    <div class="sans space-y-3 text-[15px]" style="color:#4a3826">
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>What is an IFSC code and what is it used for?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">IFSC stands for Indian Financial System Code — an 11-character code assigned by the RBI to every bank branch. It routes electronic transfers (NEFT, RTGS, IMPS) to the correct bank and branch. The first 4 characters identify the bank, the 5th is always 0, and the last 6 identify the branch.</p>
+      </details>
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>How can I find the IFSC code of my bank branch?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">Check your cheque book leaf, passbook, bank statement, mobile banking app, or your bank's official branch locator. The RBI also publishes the official list. Always confirm from an official source before adding a new payee.</p>
+      </details>
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>Is it safe to share my IFSC code with someone?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">Yes. An IFSC alone cannot be used to withdraw money — it only identifies your branch for incoming transfers. It becomes sensitive only when combined with your account number and personal details, so share it only with trusted parties.</p>
+      </details>
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>Why is the 5th character of every IFSC code always 0?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">The 5th character is reserved by the RBI for future use and is always the digit 0 in all currently issued codes, giving every IFSC its fixed 4 + 1 + 6 structure.</p>
+      </details>
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>What do the digits of an Indian PIN code mean?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">The 1st digit indicates one of 9 postal zones, the 2nd the sub-zone, the 3rd (with the first two) the sorting district, and the last 3 digits the individual post office. Zone 9 is reserved for the Army Postal Service.</p>
+      </details>
+      <details class="faq-item rounded-md p-4" style="background:#F5EFE0;border:1px solid #e2d6bd">
+        <summary class="font-bold flex justify-between items-center" style="color:#92400E"><span>My bank merged with another bank — has my IFSC code changed?</span><span class="text-xl">+</span></summary>
+        <p class="mt-2">Possibly. After mergers (e.g. Allahabad Bank into Indian Bank, Andhra Bank into Union Bank of India, SBI associates into SBI), old IFSCs were replaced. Old codes often work during a transition period, but confirm the current code with the successor bank before transferring.</p>
+      </details>
+    </div>
+  </div>
+</article>
+
+<footer class="mx-auto max-w-6xl px-4 sm:px-6 pb-10 text-center">
+  <p class="sans text-xs" style="color:#8a6b4d">PinAtlas · Free IFSC validator &amp; PIN decoder · Results are indicative — verify with your bank or India Post.</p>
+</footer>
+
+<script>
+// === PINATLAS LOGIC START ===
+/* Pure logic — also exercised by the Node test suite. No DOM here. */
+const BANKS = {
+  SBIN:{name:'State Bank of India',type:'Public sector'},
+  HDFC:{name:'HDFC Bank',type:'Private sector'},
+  ICIC:{name:'ICICI Bank',type:'Private sector'},
+  PUNB:{name:'Punjab National Bank',type:'Public sector'},
+  BARB:{name:'Bank of Baroda',type:'Public sector'},
+  UTIB:{name:'Axis Bank',type:'Private sector'},
+  KKBK:{name:'Kotak Mahindra Bank',type:'Private sector'},
+  CNRB:{name:'Canara Bank',type:'Public sector'},
+  UBIN:{name:'Union Bank of India',type:'Public sector'},
+  IBKL:{name:'IDBI Bank',type:'Public sector'},
+  BKID:{name:'Bank of India',type:'Public sector'},
+  CBIN:{name:'Central Bank of India',type:'Public sector'},
+  MAHB:{name:'Bank of Maharashtra',type:'Public sector'},
+  IDIB:{name:'Indian Bank',type:'Public sector'},
+  IOBA:{name:'Indian Overseas Bank',type:'Public sector'},
+  INDB:{name:'IndusInd Bank',type:'Private sector'},
+  FDRL:{name:'Federal Bank',type:'Private sector'},
+  YESB:{name:'YES Bank',type:'Private sector'},
+  RATN:{name:'RBL Bank',type:'Private sector'},
+  KVBL:{name:'Karur Vysya Bank',type:'Private sector'},
+  KARB:{name:'Karnataka Bank',type:'Private sector'},
+  PSIB:{name:'Punjab & Sind Bank',type:'Public sector'},
+  JAKA:{name:'Jammu & Kashmir Bank',type:'Private sector'},
+  DCBL:{name:'DCB Bank',type:'Private sector'}
+};
+/* Old bank prefix -> successor after merger */
+const MERGERS = {
+  ALLA:{old:'Allahabad Bank',successor:'Indian Bank'},
+  ANDB:{old:'Andhra Bank',successor:'Union Bank of India'},
+  CORP:{old:'Corporation Bank',successor:'Union Bank of India'},
+  SYNB:{old:'Syndicate Bank',successor:'Canara Bank'},
+  ORBC:{old:'Oriental Bank of Commerce',successor:'Punjab National Bank'},
+  UTBI:{old:'United Bank of India',successor:'Punjab National Bank'},
+  BKDN:{old:'Dena Bank',successor:'Bank of Baroda'},
+  VIJB:{old:'Vijaya Bank',successor:'Bank of Baroda'},
+  SBBJ:{old:'State Bank of Bikaner & Jaipur',successor:'State Bank of India'},
+  SBHY:{old:'State Bank of Hyderabad',successor:'State Bank of India'},
+  SBMY:{old:'State Bank of Mysore',successor:'State Bank of India'},
+  SBTR:{old:'State Bank of Travancore',successor:'State Bank of India'},
+  STBP:{old:'State Bank of Patiala',successor:'State Bank of India'}
+};
+const PIN_ZONES = {
+  '1':{name:'Northern Zone',states:['Delhi','Haryana','Punjab','Himachal Pradesh','Jammu & Kashmir','Ladakh','Chandigarh']},
+  '2':{name:'Uttar Pradesh & Uttarakhand',states:['Uttar Pradesh','Uttarakhand']},
+  '3':{name:'Western Zone',states:['Rajasthan','Gujarat','Dadra and Nagar Haveli and Daman and Diu']},
+  '4':{name:'Central-West Zone',states:['Maharashtra','Goa','Madhya Pradesh','Chhattisgarh']},
+  '5':{name:'Southern Zone',states:['Telangana','Andhra Pradesh','Karnataka']},
+  '6':{name:'Far-South Zone',states:['Tamil Nadu','Kerala','Puducherry','Lakshadweep']},
+  '7':{name:'Eastern & North-East Zone',states:['West Bengal','Odisha','Arunachal Pradesh','Nagaland','Manipur','Mizoram','Tripura','Meghalaya','Andaman and Nicobar Islands','Assam','Sikkim']},
+  '8':{name:'East-Central Zone',states:['Bihar','Jharkhand']},
+  '9':{name:'Army Postal Service',states:['Army Post Offices (APO) / Field Post Offices (FPO)']}
+};
+
+function normalizeIFSC(s){ return String(s == null ? '' : s).trim().toUpperCase(); }
+
+function validateIFSC(raw){
+  const code = normalizeIFSC(raw);
+  const errors = [];
+  if(code.length === 0){ errors.push('Please enter an IFSC code.'); }
+  else {
+    if(code.length !== 11) errors.push('Must be exactly 11 characters — you entered ' + code.length + '.');
+    if(code.length >= 4 && !/^[A-Z]{4}/.test(code)) errors.push('The first 4 characters must be letters (the bank code).');
+    if(code.length >= 5 && code[4] !== '0') errors.push('The 5th character must be 0 (reserved).');
+    if(code.length === 11 && !/^[A-Z0-9]{6}$/.test(code.slice(5))) errors.push('The last 6 characters must be letters or digits (the branch code).');
+  }
+  const ok = errors.length === 0;
+  const segments = ok ? { bank: code.slice(0,4), reserved: code[4], branch: code.slice(5) } : null;
+  const bankCode = ok ? code.slice(0,4) : null;
+  return {
+    ok, code, errors, segments,
+    bank: bankCode && BANKS[bankCode] ? Object.assign({code: bankCode}, BANKS[bankCode]) : null,
+    merger: bankCode && MERGERS[bankCode] ? MERGERS[bankCode] : null
+  };
+}
+
+function validatePIN(raw){
+  const pin = String(raw == null ? '' : raw).trim();
+  const errors = [];
+  if(pin.length === 0){ errors.push('Please enter a PIN code.'); }
+  else {
+    if(!/^\d+$/.test(pin)) errors.push('A PIN code contains digits only.');
+    else if(pin.length !== 6) errors.push('Must be exactly 6 digits — you entered ' + pin.length + '.');
+    else if(pin[0] === '0') errors.push('The first digit cannot be 0 (postal zones run 1–9).');
+  }
+  return { ok: errors.length === 0, pin, errors };
+}
+
+function subRegion(pin){
+  const p3 = pin.slice(0,3);
+  if(p3 === '396') return 'Dadra and Nagar Haveli and Daman and Diu';
+  if(p3 === '403') return 'Goa';
+  if(p3 === '605') return 'Puducherry';
+  if(p3 === '682') return 'Lakshadweep';
+  if(p3 === '737') return 'Sikkim';
+  if(p3 === '744') return 'Andaman and Nicobar Islands';
+  const n = parseInt(pin.slice(0,2), 10);
+  const R = [
+    [11,11,'Delhi'],[12,13,'Haryana'],[14,15,'Punjab'],[16,16,'Chandigarh'],
+    [17,17,'Himachal Pradesh'],[18,19,'Jammu & Kashmir, Ladakh'],
+    [20,28,'Uttar Pradesh, Uttarakhand'],[30,34,'Rajasthan'],[36,39,'Gujarat'],
+    [40,44,'Maharashtra'],[45,48,'Madhya Pradesh'],[49,49,'Chhattisgarh'],
+    [50,50,'Telangana'],[51,53,'Andhra Pradesh'],[56,59,'Karnataka'],
+    [60,66,'Tamil Nadu'],[67,69,'Kerala'],[70,74,'West Bengal'],
+    [75,77,'Odisha'],[78,78,'Assam'],
+    [79,79,'Arunachal Pradesh, Meghalaya, Manipur, Mizoram, Nagaland, Tripura'],
+    [80,85,'Bihar, Jharkhand'],[90,99,'Army Postal Service']
+  ];
+  for(const [lo,hi,label] of R){ if(n >= lo && n <= hi) return label; }
+  return 'Unassigned series (indicative)';
+}
+
+function decodePIN(pin){
+  const v = validatePIN(pin);
+  if(!v.ok) return { ok:false, errors:v.errors };
+  const z = PIN_ZONES[pin[0]];
+  return {
+    ok:true, pin,
+    zoneDigit: pin[0], zoneName: z.name, states: z.states,
+    subRegion: subRegion(pin),
+    sortingDistrict: pin.slice(0,3),
+    postOffice: pin.slice(3)
+  };
+}
+
+function ifscSummary(code){
+  const r = validateIFSC(code);
+  if(!r.ok) return 'IFSC "' + r.code + '" is INVALID: ' + r.errors.join(' ');
+  let s = 'IFSC ' + r.code + ' is structurally VALID. Bank code ' + r.segments.bank +
+    (r.bank ? ' = ' + r.bank.name + ' (' + r.bank.type + ')' : ' (not in our offline bank list)') +
+    '; reserved char ' + r.segments.reserved + '; branch code ' + r.segments.branch + '.';
+  if(r.merger) s += ' MERGED-BANK ALERT: ' + r.merger.old + ' merged into ' + r.merger.successor + ' — confirm the current IFSC.';
+  return s + ' Indicative offline check — verify with your bank.';
+}
+
+function pinSummary(pin){
+  const d = decodePIN(pin);
+  if(!d.ok) return 'PIN "' + d.pin + '" is INVALID: ' + d.errors.join(' ');
+  return 'PIN ' + d.pin + ': Zone ' + d.zoneDigit + ' (' + d.zoneName + '); sorting district ' +
+    d.sortingDistrict + ' → ' + d.subRegion + '; covers: ' + d.states.join(', ') +
+    '. Indicative offline decode — verify with India Post.';
+}
+// === PINATLAS LOGIC END ===
+
+/* ---------- UI wiring (DOM only) ---------- */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const tabIfsc = $('tab-ifsc'), tabPin = $('tab-pin');
+  const panelIfsc = $('panel-ifsc'), panelPin = $('panel-pin');
+  const ifscInput = $('ifsc-input'), pinInput = $('pin-input');
+  const ifscResult = $('ifsc-result'), pinResult = $('pin-result');
+
+  function setTab(which){
+    const isIfsc = which === 'ifsc';
+    tabIfsc.className = (isIfsc ? 'tab-active' : 'tab-idle') + ' px-6 py-2.5 rounded-md font-bold text-sm sm:text-base tracking-wide';
+    tabPin.className = (isIfsc ? 'tab-idle' : 'tab-active') + ' px-6 py-2.5 rounded-md font-bold text-sm sm:text-base tracking-wide';
+    tabIfsc.setAttribute('aria-selected', isIfsc); tabPin.setAttribute('aria-selected', !isIfsc);
+    panelIfsc.hidden = !isIfsc; panelPin.hidden = isIfsc;
+  }
+  tabIfsc.addEventListener('click', () => setTab('ifsc'));
+  tabPin.addEventListener('click', () => setTab('pin'));
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function segChip(label, value, title){
+    return '<div class="text-center">' +
+      '<div class="seg-chip mono inline-block px-3 py-2 rounded-md text-lg sm:text-xl font-bold tracking-widest" style="background:#fff" title="' + esc(title) + '">' + esc(value) + '</div>' +
+      '<div class="sans text-[11px] font-bold tracking-widest uppercase mt-1.5" style="color:#92400E">' + esc(label) + '</div></div>';
+  }
+  function checkRow(ok, text){
+    return '<li class="sans flex items-start gap-2 text-sm py-1">' +
+      '<span class="font-bold" style="color:' + (ok ? '#15803d' : '#B91C1C') + '">' + (ok ? '✓' : '✗') + '</span>' +
+      '<span style="color:#4a3826">' + esc(text) + '</span></li>';
+  }
+  const disclaimer = '<p class="sans text-xs mt-4 p-3 rounded-md" style="background:#F5EFE0;border:1px dashed #92400E;color:#6b4a2f">' +
+    '⚠️ <strong>Indicative offline result.</strong> This checks format and identifies the bank from an offline table — it is <strong>not a live branch directory</strong>. ' +
+    'Always confirm codes with your bank or the RBI before transferring money.</p>';
+
+  function copyText(btn, text){
+    const done = () => { const t = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = t, 1500); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(done);
+    } else {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try{ document.execCommand('copy'); }catch(e){} document.body.removeChild(ta); done();
+    }
+  }
+
+  function renderIFSC(){
+    const r = validateIFSC(ifscInput.value);
+    if(!r.ok){
+      ifscResult.innerHTML = '<div class="rounded-md p-5" style="background:#fef2f2;border:2px solid #B91C1C">' +
+        '<p class="sans font-extrabold text-lg mb-2" style="color:#B91C1C">✗ Invalid IFSC</p>' +
+        '<ul class="list-none">' + r.errors.map(e => checkRow(false, e)).join('') + '</ul></div>';
+      saveHist('ifsc', r.code || ifscInput.value.trim().toUpperCase(), 'Invalid');
+      return;
+    }
+    const b = r.bank, m = r.merger;
+    let bankHtml;
+    if(b){
+      bankHtml = '<div class="rounded-md p-4 mb-4" style="background:#f0fdf4;border:2px solid #15803d">' +
+        '<p class="sans font-extrabold text-lg" style="color:#15803d">✓ Valid IFSC</p>' +
+        '<p class="sans text-base mt-1"><strong>' + esc(b.name) + '</strong> <span class="text-sm" style="color:#6b4a2f">(' + esc(b.type) + ')</span></p>' +
+        '<p class="sans text-xs mt-1" style="color:#6b4a2f">Bank code <span class="mono font-bold">' + esc(r.segments.bank) + '</span> identified from our offline bank table.</p></div>';
+    } else {
+      bankHtml = '<div class="rounded-md p-4 mb-4" style="background:#fffbeb;border:2px solid #b45309">' +
+        '<p class="sans font-extrabold text-lg" style="color:#b45309">✓ Valid format — bank unknown</p>' +
+        '<p class="sans text-sm mt-1" style="color:#4a3826">The structure is correct, but <span class="mono font-bold">' + esc(r.segments.bank) + '</span> is not in our offline table of major banks. It may be a smaller or newer bank — please verify with your bank.</p></div>';
+    }
+    let mergerHtml = '';
+    if(m){
+      mergerHtml = '<div class="rounded-md p-4 mb-4" style="background:#fef2f2;border:2px solid #B91C1C">' +
+        '<p class="sans font-extrabold" style="color:#B91C1C">⚠️ Merged-bank alert</p>' +
+        '<p class="sans text-sm mt-1" style="color:#4a3826"><strong>' + esc(m.old) + '</strong> merged into <strong>' + esc(m.successor) + '</strong>. ' +
+        'Old IFSCs often keep working for a while, but confirm the current IFSC with ' + esc(m.successor) + ' before transferring.</p></div>';
+    }
+    ifscResult.innerHTML = bankHtml + mergerHtml +
+      '<div class="stamp-card rounded-md p-5">' +
+        '<p class="sans text-xs font-extrabold tracking-widest uppercase mb-4 text-center" style="color:#92400E">— Code anatomy —</p>' +
+        '<div class="mono text-center text-2xl sm:text-3xl font-bold tracking-[.2em] mb-4" style="color:#3b2b1e">' + esc(r.code) + '</div>' +
+        '<div class="flex flex-wrap justify-center items-start gap-4 sm:gap-6">' +
+          segChip('Bank · 4 letters', r.segments.bank, 'Identifies the bank') +
+          segChip('Reserved · 5th char', r.segments.reserved, 'Always 0, reserved by RBI') +
+          segChip('Branch · 6 chars', r.segments.branch, 'Identifies the branch') +
+        '</div>' +
+        '<ul class="list-none mt-4 max-w-md mx-auto">' +
+          checkRow(true, 'Exactly 11 characters') +
+          checkRow(true, 'Bank code is 4 letters') +
+          checkRow(true, '5th character is 0 (reserved)') +
+          checkRow(true, 'Branch code is 6 letters/digits') +
+        '</ul>' +
+        '<div class="text-center mt-4 no-print"><button id="ifsc-copy" class="sans px-5 py-2 rounded-md text-sm font-bold" style="background:#92400E;color:#F5EFE0">Copy summary</button></div>' +
+      '</div>' + disclaimer;
+    const summary = ifscSummary(r.code);
+    $('ifsc-copy').addEventListener('click', e => copyText(e.target, summary));
+    saveHist('ifsc', r.code, b ? b.name : (m ? m.old + ' → ' + m.successor : 'Valid format'));
+  }
+
+  function renderPIN(){
+    const d = decodePIN(pinInput.value);
+    if(!d.ok){
+      pinResult.innerHTML = '<div class="rounded-md p-5" style="background:#fef2f2;border:2px solid #B91C1C">' +
+        '<p class="sans font-extrabold text-lg mb-2" style="color:#B91C1C">✗ Invalid PIN</p>' +
+        '<ul class="list-none">' + d.errors.map(e => checkRow(false, e)).join('') + '</ul></div>';
+      saveHist('pin', pinInput.value.trim(), 'Invalid');
+      return;
+    }
+    const isArmy = d.zoneDigit === '9';
+    pinResult.innerHTML =
+      '<div class="stamp-card rounded-md p-5">' +
+        '<p class="sans text-xs font-extrabold tracking-widest uppercase mb-4 text-center" style="color:#92400E">— PIN anatomy —</p>' +
+        '<div class="flex flex-wrap justify-center items-start gap-4 sm:gap-6 mono">' +
+          '<div class="text-center"><div class="seg-chip inline-block px-3 py-2 rounded-md text-2xl font-bold" style="background:#fff;color:#B91C1C">' + esc(d.zoneDigit) + '</div><div class="sans text-[11px] font-bold tracking-widest uppercase mt-1.5" style="color:#92400E">Zone</div></div>' +
+          '<div class="text-center"><div class="seg-chip inline-block px-3 py-2 rounded-md text-2xl font-bold" style="background:#fff">' + esc(d.pin[1]) + '</div><div class="sans text-[11px] font-bold tracking-widest uppercase mt-1.5" style="color:#92400E">Sub-zone</div></div>' +
+          '<div class="text-center"><div class="seg-chip inline-block px-3 py-2 rounded-md text-2xl font-bold" style="background:#fff">' + esc(d.sortingDistrict.slice(2)) + '</div><div class="sans text-[11px] font-bold tracking-widest uppercase mt-1.5" style="color:#92400E">Sorting dist.</div></div>' +
+          '<div class="text-center"><div class="seg-chip inline-block px-3 py-2 rounded-md text-2xl font-bold" style="background:#fff">' + esc(d.postOffice) + '</div><div class="sans text-[11px] font-bold tracking-widest uppercase mt-1.5" style="color:#92400E">Post office</div></div>' +
+        '</div>' +
+        '<div class="sans mt-5 max-w-lg mx-auto text-[15px]" style="color:#4a3826">' +
+          '<p class="mb-2"><strong style="color:#92400E">Postal zone:</strong> Zone ' + esc(d.zoneDigit) + ' — ' + esc(d.zoneName) + '</p>' +
+          '<p class="mb-2"><strong style="color:#92400E">Sorting district (' + esc(d.sortingDistrict) + '):</strong> ' + esc(d.subRegion) + '</p>' +
+          '<p class="mb-1"><strong style="color:#92400E">Covers:</strong> ' + esc(d.states.join(', ')) + '</p>' +
+          (isArmy ? '<p class="mt-2 text-sm" style="color:#B91C1C"><strong>Note:</strong> Zone 9 codes belong to the Army Postal Service — the digits do not map to a civilian geography.</p>' : '') +
+        '</div>' +
+        '<div class="text-center mt-4 no-print"><button id="pin-copy" class="sans px-5 py-2 rounded-md text-sm font-bold" style="background:#92400E;color:#F5EFE0">Copy summary</button></div>' +
+      '</div>' +
+      '<p class="sans text-xs mt-4 p-3 rounded-md" style="background:#F5EFE0;border:1px dashed #92400E;color:#6b4a2f">' +
+      '⚠️ <strong>Indicative offline decode.</strong> The zone and sorting district follow from the digits by design, but the last three digits are serial numbers — ' +
+      'they do <strong>not</strong> name a specific post office. For the exact post office, use India Post\'s official PIN search.</p>';
+    const summary = pinSummary(d.pin);
+    $('pin-copy').addEventListener('click', e => copyText(e.target, summary));
+    saveHist('pin', d.pin, d.subRegion);
+  }
+
+  /* ---------- history (localStorage) ---------- */
+  const HKEY = 'pinatlas-history-v1';
+  function loadHist(){ try{ return JSON.parse(localStorage.getItem(HKEY)) || []; }catch(e){ return []; } }
+  function saveHist(type, code, label){
+    if(!code) return;
+    let h = loadHist().filter(x => !(x.type === type && x.code === code));
+    h.unshift({type, code, label, ts: Date.now()});
+    h = h.slice(0, 12);
+    try{ localStorage.setItem(HKEY, JSON.stringify(h)); }catch(e){}
+    renderHist();
+  }
+  function renderHist(){
+    const h = loadHist(), box = $('hist-list');
+    if(h.length === 0){
+      box.innerHTML = '<p class="text-xs italic" style="color:#8a6b4d">Nothing checked yet — your recent validations will appear here.</p>';
+      return;
+    }
+    box.innerHTML = '';
+    h.forEach(x => {
+      const b = document.createElement('button');
+      b.className = 'mono text-xs px-3 py-1.5 rounded-full border-2 no-print';
+      b.style.cssText = 'border-color:#92400E;background:#fffdf6;color:#92400E';
+      b.title = x.label + ' — click to re-run';
+      b.textContent = (x.type === 'ifsc' ? '🏦 ' : '📮 ') + x.code;
+      b.addEventListener('click', () => {
+        if(x.type === 'ifsc'){ setTab('ifsc'); ifscInput.value = x.code; renderIFSC(); }
+        else { setTab('pin'); pinInput.value = x.code; renderPIN(); }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      });
+      box.appendChild(b);
+    });
+  }
+  $('hist-clear').addEventListener('click', () => { try{ localStorage.removeItem(HKEY); }catch(e){} renderHist(); });
+
+  /* ---------- events ---------- */
+  $('ifsc-btn').addEventListener('click', renderIFSC);
+  ifscInput.addEventListener('keydown', e => { if(e.key === 'Enter') renderIFSC(); });
+  $('pin-btn').addEventListener('click', renderPIN);
+  pinInput.addEventListener('keydown', e => { if(e.key === 'Enter') renderPIN(); });
+
+  renderHist();
+})();
+</script>
+</body>
+</html>
